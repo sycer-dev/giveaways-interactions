@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  bot:
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - '2399:2399'
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:13-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: fyko
+      POSTGRES_PASSWORD: doctordoctor
+      POSTGRES_DB: giveaways-interactions
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+
+  redis:
+    image: redis:5-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass uMRn30MfGfuNzYrojcHaD
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli ping']
+      interval: 10s
+      timeout: 5s
+    ports:
+      - '6379:6379'
+    expose:
+      - 6379
+
+volumes:
+  postgres_data:
+  redis_data:

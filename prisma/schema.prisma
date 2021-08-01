@@ -1,0 +1,102 @@
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+// object for storing guild data
+model Guild {
+    /// the id of this guild
+    id String @id
+
+    /// an array of giveaways
+    giveaways Giveaway[]
+
+    /// the date this row was created
+    created_at DateTime @default(now())
+    /// the date this row was last updated
+    updated_at DateTime @updatedAt
+
+    @@map("guilds")
+}
+
+// object for storing a giveaway
+model Giveaway {
+    /// the id of this object
+    id String @id @default(uuid())
+
+    /// the title of this giveaways
+    title String
+
+    /// the emoji used to enter this giveaway
+    emoji String
+
+    /// the message id of this giveaway
+    message_id String @unique
+    /// the channel id of this giveaway
+    channel_id String
+
+    /// the status of the giveaway
+    status GiveawayStatus @default(IN_PROGRESS)
+
+    /// when this giveaway should be drawn
+    draw_at DateTime
+
+    /// the duration of this giveaway, in milliseconds
+    duration Int
+
+    /// how many winners to draw
+    winners Int
+
+    /// the user who created this giveaway
+    created_by String
+
+    /// the entries that belong to this giveaway
+    entries GiveawayEntry[]
+
+    /// the guild this giveaway belings to
+    guild    Guild @relation(fields: [guild_id], references: [id])
+    /// the id of the client this belongs to
+    guild_id String
+
+    /// the date this row was created
+    created_at DateTime @default(now())
+    /// the date this row was last updated
+    updated_at DateTime @updatedAt
+
+    @@map("giveaways")
+}
+
+model GiveawayEntry {
+	@@unique([ giveaway_id, user_id ])
+
+    /// the id of this object
+    id String @id @default(uuid())
+
+    // id id of the user this entry belongs to
+    user_id String
+
+    /// whether or not this was a winning entry
+    winner Boolean @default(false)
+
+    /// the guild this giveaway belings to
+    giveaway    Giveaway @relation(fields: [giveaway_id], references: [id])
+    /// the id of the client this belongs to
+    giveaway_id String
+
+    /// the date this row was created
+    created_at DateTime @default(now())
+    /// the date this row was last updated
+    updated_at DateTime @updatedAt
+
+    @@map("entries")
+}
+
+enum GiveawayStatus {
+    IN_PROGRESS
+    DRAWN
+    CANCELLED
+}
