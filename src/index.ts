@@ -1,16 +1,14 @@
 process.env.NODE_ENV ??= 'development';
+import 'reflect-metadata';
+
 import { PrismaClient } from '@prisma/client';
 import { APIInteraction, InteractionType } from 'discord-api-types/v9';
 import { verifyKey } from 'discord-interactions';
 import fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
-import 'reflect-metadata';
 import { container } from 'tsyringe';
 import { handleEnterGiveawayPress } from './buttons/enterGiveaway';
-import { invite } from './commands';
-import { create } from './commands/create';
-import { ping } from './commands/ping';
-import { test } from './commands/test';
+import { invite, create, ping } from './commands';
 import { REST } from './structures/REST';
 import { ButtonIds } from './util/constants';
 import { logger } from './util/logger';
@@ -55,7 +53,6 @@ function start() {
 				const name = message.data.name;
 
 				if (name === 'create') return create(res, message);
-				if (name === 'test') return test(res, message);
 				if (name === 'ping') return ping(res, message);
 				if (name === 'invite') return invite(res);
 			}
