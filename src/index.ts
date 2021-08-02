@@ -40,7 +40,7 @@ function verify(req: FastifyRequest, reply: FastifyReply, done: () => void) {
 function start() {
 	const server: FastifyInstance<Server, IncomingMessage, ServerResponse> = fastify({ logger });
 
-	server.setNotFoundHandler((_, res) => void res.status(401));
+	server.get('/interactions', { preHandler: verify }, async (_, res) => res.send(200));
 
 	server.post('/interactions', { preHandler: verify }, async (req, res) => {
 		logger.info(`incoming request: `, req.body);
