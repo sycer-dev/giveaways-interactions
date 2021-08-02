@@ -38,7 +38,7 @@ function verify(req: FastifyRequest, reply: FastifyReply, done: () => void) {
 }
 
 function start() {
-	const server: FastifyInstance<Server, IncomingMessage, ServerResponse> = fastify();
+	const server: FastifyInstance<Server, IncomingMessage, ServerResponse> = fastify({ logger });
 
 	server.post('/interactions', { preHandler: verify }, async (req, res) => {
 		logger.info(`incoming request: `, req.body);
