@@ -8,15 +8,19 @@ import fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import { container } from 'tsyringe';
 import { handleEnterGiveawayPress } from './buttons/enterGiveaway';
-import { invite, create, ping } from './commands';
 import { REST } from './structures/REST';
 import { ButtonIds } from './util/constants';
 import { logger } from './util/logger';
-import { kPrisma, kREST } from './util/symbols';
+import { kCommands, kPrisma, kREST } from './util/symbols';
+import Collection from '@discordjs/collection';
+import type { Command } from './structures/Command';
+import { loadCommands } from './util';
 
+const commands = new Collection<string, Command>();
 const prisma = new PrismaClient();
 const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN!);
 
+container.register(kCommands, { useValue: commands });
 container.register(kPrisma, { useValue: prisma });
 container.register(kREST, { useValue: rest });
 
@@ -37,7 +41,9 @@ function verify(req: FastifyRequest, reply: FastifyReply, done: () => void) {
 	void done();
 }
 
-function start() {
+async function start() {
+	await loadCommands(commands);
+
 	const server: FastifyInstance<Server, IncomingMessage, ServerResponse> = fastify({ logger });
 
 	server.get('/interactions', { preHandler: verify }, async (_, res) => res.send(200));
@@ -53,10 +59,19 @@ function start() {
 
 			if (message.type === InteractionType.ApplicationCommand) {
 				const name = message.data.name;
+				const command = commands.get(name);
+				if (command) {
+					const user = message.user ?? message.member?.user;
+					const info = `command "${name}"; triggered by ${user?.username}#${user?.discriminator} (${user?.id})`;
+					logger.info(`Executing ${info}`);
 
-				if (name === 'create') return create(res, message);
-				if (name === 'ping') return ping(res, message);
-				if (name === 'invite') return invite(res);
+					try {
+						await command.exec(res, message);
+						logger.info(`Successfully executed ${info}`);
+					} catch (err) {
+						logger.error(`Failed to execute ${info}`, err);
+					}
+				}
 			}
 
 			if (message.type === InteractionType.MessageComponent) {
@@ -74,4 +89,4 @@ function start() {
 	});
 }
 
-start();
+void start();

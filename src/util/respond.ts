@@ -5,6 +5,7 @@ import {
 	APIInteractionResponseChannelMessageWithSource,
 	APIInteractionResponseDeferredChannelMessageWithSource,
 	InteractionResponseType,
+	RESTPatchAPIWebhookWithTokenMessageResult,
 	Routes,
 } from 'discord-api-types/v9';
 import type { FastifyReply } from 'fastify';
@@ -40,7 +41,7 @@ export function createResponse(
 	} as APIInteractionResponseChannelMessageWithSource);
 }
 
-export function sendFollowup(
+export async function sendFollowup(
 	applicationId: string,
 	interactionToken: string,
 	content: string,
@@ -58,7 +59,7 @@ export function sendFollowup(
 	} = {},
 ) {
 	const rest = container.resolve<REST>(kREST);
-	return rest.patch(Routes.webhookMessage(applicationId, interactionToken, '@original'), {
+	return (await rest.patch(Routes.webhookMessage(applicationId, interactionToken, '@original'), {
 		body: {
 			components,
 			content,
@@ -66,7 +67,7 @@ export function sendFollowup(
 			flags: ephemeral ? 64 : 0,
 			allowed_mentions: { parse, users },
 		},
-	});
+	})) as RESTPatchAPIWebhookWithTokenMessageResult;
 }
 
 export function defer(res: FastifyReply) {

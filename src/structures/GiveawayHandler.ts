@@ -1,12 +1,13 @@
-import Bull from 'bull';
-import { logger as _logger } from '../util/logger';
-import { GiveawayEntry, GiveawayStatus, PrismaClient } from '@prisma/client';
-import type { APIEmbed } from 'discord-api-types';
-import { Colors } from '../util/constants';
-import { stripIndents } from 'common-tags';
 import { inlineCode, time, TimestampStyles, userMention } from '@discordjs/builders';
-import { pluralize } from '../util';
+import { GiveawayStatus, PrismaClient } from '@prisma/client';
+import Bull from 'bull';
+import { stripIndents } from 'common-tags';
+import type { APIEmbed } from 'discord-api-types';
 import { inject, injectable } from 'tsyringe';
+import { list, pluralize } from '../util';
+import { Colors } from '../util/constants';
+import { logger as _logger } from '../util/logger';
+import { queryWinners } from '../util/prisma';
 import { kPrisma, kREST } from '../util/symbols';
 import type { REST } from './REST';
 
@@ -77,20 +78,7 @@ export class GiveawayHandler {
 		});
 
 		// query our winning entries
-		const winners = await this.prisma.$queryRaw<GiveawayEntry[]>(
-			`
-			SELECT *
-			FROM   "entries" AS rawentries
-				JOIN (SELECT id
-						FROM   "entries"
-						WHERE  giveaway_id = $1
-						ORDER  BY Random()
-						LIMIT  $2) AS entries
-					ON rawentries.id = entries.id;
-		`,
-			giveaway.id,
-			giveaway.winners,
-		);
+		const winners = await queryWinners(this.prisma, giveaway.id, giveaway.winners);
 
 		// update the entries so we know they were winning entries
 		await this.prisma.giveawayEntry.updateMany({
@@ -104,15 +92,14 @@ export class GiveawayHandler {
 			},
 		});
 
+		const winnerMentions = winners.map((w) => userMention(w.user_id));
+
 		const host = await this.rest.fetchUser(giveaway.created_by);
 
-		// @ts-expect-error
 		const mention = userMention(giveaway.created_by);
 		const tag = `${host.username}#${host.discriminator}`;
 		const relativeTime = time(giveaway.draw_at, TimestampStyles.RelativeTime);
 		const shortTime = time(giveaway.draw_at, TimestampStyles.ShortDateTime);
-		// @ts-expect-error
-		const winnerMentions = winners.map((w) => userMention(w.user_id));
 		const embed: APIEmbed = {
 			title: giveaway.title,
 			color: Colors.GiveawayOver,
@@ -137,9 +124,10 @@ export class GiveawayHandler {
 
 		// send new message so users know they won
 		await this.rest.sendMessage(giveaway.channel_id, {
-			content: `🎉 Congratulations, ${winnerMentions.join(', ').substring(0, 1500)}! You won the giveaway for *${
-				giveaway.title
-			}*!`,
+			content: `🎉 Congratulations, ${list(winnerMentions)}! You won the giveaway for *${giveaway.title}*!`,
+			allowed_mentions: {
+				users: winners.map((w) => w.user_id),
+			},
 		});
 
 		return true;

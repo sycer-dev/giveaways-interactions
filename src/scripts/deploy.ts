@@ -1,9 +1,6 @@
-import { config } from 'dotenv-cra';
-import { resolve } from 'path';
 import { logger } from '../util/logger';
 import { REST } from '@discordjs/rest';
 import { RESTPutAPIApplicationCommandsResult, Routes } from 'discord-api-types/v9';
-config({ path: resolve(__dirname, '../../.env') });
 
 const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN!);
 
