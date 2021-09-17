@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from '@discordjs/builders';
+import { SlashCommandBuilder, hideLinkEmbed, hyperlink } from '@discordjs/builders';
 import type { FastifyReply } from 'fastify';
 import { URLSearchParams } from 'url';
 import type { Command } from '../structures/Command';
@@ -17,7 +17,11 @@ export default class implements Command {
 			query.set('scope', 'bot applications.commands');
 			const link = `https://discord.com/oauth2/authorize?${query}`;
 
-			return createResponse(res, `Want to add Giveaways to your server? [Click here](<${link}>)!`, true);
+			return createResponse(
+				res,
+				`Want to add Giveaways to your server? ${hyperlink('Click here', hideLinkEmbed(link))}!`,
+				true,
+			);
 		} catch (err) {
 			logger.error(err);
 		}
