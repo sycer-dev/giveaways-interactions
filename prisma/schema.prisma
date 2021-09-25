@@ -54,6 +54,9 @@ model Giveaway {
     /// the user who created this giveaway
     created_by String
 
+    /// The image to set in the embed
+    image String?
+
     /// the entries that belong to this giveaway
     entries GiveawayEntry[]
 
