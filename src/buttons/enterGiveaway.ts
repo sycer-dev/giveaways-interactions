@@ -1,14 +1,17 @@
 import type { APIMessageComponentInteraction } from 'discord-api-types';
 import type { FastifyReply } from 'fastify';
-import { createResponse } from '../util/respond';
+import { defer, sendFollowup } from '../util/respond';
 import { container } from 'tsyringe';
 import type { PrismaClient } from '@prisma/client';
 import { kPrisma } from '../util/symbols';
 
 export async function handleEnterGiveawayPress(res: FastifyReply, interaction: APIMessageComponentInteraction) {
+	// do some defering to avoid spam
+	await defer(res);
+
 	const prisma = container.resolve<PrismaClient>(kPrisma);
 
-	const { member, message } = interaction;
+	const { member, message, application_id, token } = interaction;
 	const { user } = member!;
 
 	const giveaway = (await prisma.giveaway.findFirst({
@@ -26,6 +29,9 @@ export async function handleEnterGiveawayPress(res: FastifyReply, interaction: A
 		},
 	});
 
+	// start by defering button for three seconds to reduce spam
+	await new Promise((r) => setTimeout(r, 3000));
+
 	if (exists) {
 		await prisma.giveaway.update({
 			where: { id: giveaway.id },
@@ -36,8 +42,9 @@ export async function handleEnterGiveawayPress(res: FastifyReply, interaction: A
 			},
 		});
 
-		return createResponse(
-			res,
+		return sendFollowup(
+			application_id,
+			token,
 			`You've been removed from this giveaway! If you want to re-enter, re-click the entry button!`,
 			true,
 		);
@@ -54,5 +61,5 @@ export async function handleEnterGiveawayPress(res: FastifyReply, interaction: A
 		},
 	});
 
-	return createResponse(res, `You've entered this giveaway. Good luck! 🍀`, true);
+	return sendFollowup(application_id, token, `You've entered this giveaway. Good luck! 🍀`, true);
 }
