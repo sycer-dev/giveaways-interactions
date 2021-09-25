@@ -128,7 +128,7 @@ export default class implements Command {
 			];
 
 			const body: RESTPostAPIChannelMessageJSONBody = {
-				content: bold('🎉 **Giveaway** 🎉'),
+				content: bold('🎉 Giveaway 🎉'),
 				embeds: [embed],
 				components,
 			};

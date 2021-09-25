@@ -15,6 +15,7 @@ import { kCommands, kPrisma, kREST } from './util/symbols';
 import Collection from '@discordjs/collection';
 import type { Command } from './structures/Command';
 import { loadCommands } from './util';
+import { populateRedis } from './scripts/populateRedis';
 
 const commands = new Collection<string, Command>();
 const prisma = new PrismaClient();
@@ -77,7 +78,7 @@ async function start() {
 			if (message.type === InteractionType.MessageComponent) {
 				const id = message.data.custom_id;
 				if (id === ButtonIds.EnterGiveaway) {
-					return handleEnterGiveawayPress(res, message);
+					void handleEnterGiveawayPress(res, message);
 				}
 			}
 		} catch {}
@@ -87,6 +88,8 @@ async function start() {
 		if (err) logger.error('An error occurred starting the server: ', err);
 		else logger.info(`Server started at ${adress}`);
 	});
+
+	void populateRedis();
 }
 
 void start();
