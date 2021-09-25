@@ -30,6 +30,7 @@ import { kPrisma, kREST } from '../util/symbols';
 interface TraditionalGiveawayArguments {
 	winners?: number;
 	emoji?: string;
+	image?: string;
 	duration: string;
 	title: string;
 }
@@ -54,6 +55,9 @@ export default class implements Command {
 			opt
 				.setName('emoji')
 				.setDescription('The emoji on the button the users press to enter the giveaway (default: 🎉)'),
+		)
+		.addStringOption((opt) =>
+			opt.setName('image').setDescription('An image URL to set as the image for the giveaway embed.'),
 		)
 		.addIntegerOption((opt) =>
 			opt.setName('winners').setDescription('The amount of winners the giveaway should have (default: 1)'),
@@ -105,6 +109,7 @@ export default class implements Command {
 				• ${inlineCode(args.winners.toString())} possible winner${pluralize(args.winners)}
 			`,
 			};
+			if (args.image) Reflect.set(embed, 'thumbnail', { url: args.image });
 
 			const emoji = args.emoji.length <= 3 ? { name: args.emoji } : transformEmojiString(args.emoji);
 			if (emoji === null) return createResponse(res, 'The emoji you provided is invalid! Please try again.', true);
@@ -147,6 +152,7 @@ export default class implements Command {
 					duration: parsedDuration,
 					winners: args.winners,
 					created_by: interaction.member!.user.id,
+					image: args.image,
 					guild: {
 						connectOrCreate: {
 							create: {

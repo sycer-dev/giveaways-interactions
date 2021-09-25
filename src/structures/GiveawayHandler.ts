@@ -80,26 +80,47 @@ export class GiveawayHandler {
 		// query our winning entries
 		const winners = await queryWinners(this.prisma, giveaway.id, giveaway.winners);
 
-		// update the entries so we know they were winning entries
-		await this.prisma.giveawayEntry.updateMany({
-			where: {
-				id: {
-					in: winners.map((w) => w.id),
-				},
-			},
-			data: {
-				winner: true,
-			},
-		});
-
-		const winnerMentions = winners.map((w) => userMention(w.user_id));
-
 		const host = await this.rest.fetchUser(giveaway.created_by);
-
 		const mention = userMention(giveaway.created_by);
 		const tag = `${host.username}#${host.discriminator}`;
 		const relativeTime = time(giveaway.draw_at, TimestampStyles.RelativeTime);
 		const shortTime = time(giveaway.draw_at, TimestampStyles.ShortDateTime);
+
+		if (!winners.length) {
+			// update old message
+			const embed: APIEmbed = {
+				title: giveaway.title,
+				color: Colors.GiveawayOver,
+				description: stripIndents`
+					This giveaway has ended!
+	
+					There were no winners.
+	
+					• Drew ${relativeTime} (${shortTime})
+					• Hosted by ${mention} (${inlineCode(tag)})
+				`,
+			};
+			if (giveaway.image) Reflect.set(embed, 'thumbnail', { url: giveaway.image });
+
+			// update our old message
+			await this.rest.updateMessage(giveaway.channel_id, giveaway.message_id, {
+				content: '🎉 **GIVEAWAY ENDED** 🎉',
+				components: [],
+				embeds: [embed],
+			});
+
+			// send new message so users know they won
+			await this.rest.sendMessage(giveaway.channel_id, {
+				content: `😟 There were no winners for the giveaway *${giveaway.title}*!`,
+				allowed_mentions: {
+					users: winners.map((w) => w.user_id),
+				},
+			});
+
+			return true;
+		}
+
+		const winnerMentions = winners.map((w) => userMention(w.user_id));
 		const embed: APIEmbed = {
 			title: giveaway.title,
 			color: Colors.GiveawayOver,
@@ -114,6 +135,19 @@ export class GiveawayHandler {
 				• Hosted by ${mention} (${inlineCode(tag)})
 			`,
 		};
+		if (giveaway.image) Reflect.set(embed, 'thumbnail', { url: giveaway.image });
+
+		// update the entries so we know they were winning entries
+		await this.prisma.giveawayEntry.updateMany({
+			where: {
+				id: {
+					in: winners.map((w) => w.id),
+				},
+			},
+			data: {
+				winner: true,
+			},
+		});
 
 		// update our old message
 		await this.rest.updateMessage(giveaway.channel_id, giveaway.message_id, {
